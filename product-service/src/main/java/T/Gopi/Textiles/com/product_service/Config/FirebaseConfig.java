@@ -4,27 +4,31 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
 
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 public class FirebaseConfig {
 
-    // Loads the service account key from the resources folder
-    @Value("classpath:serviceAccountKey.json")
-    private Resource serviceAccount;
-
     @PostConstruct
-    public void initFirebase() throws IOException {
+    public void initialize() throws Exception {
+        String firebaseConfig = System.getenv("FIREBASE_SERVICE_ACCOUNT");
+
+        if (firebaseConfig == null || firebaseConfig.isEmpty()) {
+            throw new IllegalStateException("❌ FIREBASE_SERVICE_ACCOUNT environment variable is not set.");
+        }
+
+        FirebaseOptions options = new FirebaseOptions.Builder()
+                .setCredentials(GoogleCredentials.fromStream(
+                        new ByteArrayInputStream(firebaseConfig.getBytes(StandardCharsets.UTF_8))
+                ))
+                .build();
+
         if (FirebaseApp.getApps().isEmpty()) {
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount.getInputStream()))
-                    .build();
             FirebaseApp.initializeApp(options);
-            System.out.println("✅ Firebase initialized successfully in Product Service");
+            System.out.println("✅ Firebase initialized successfully");
         }
     }
 }
